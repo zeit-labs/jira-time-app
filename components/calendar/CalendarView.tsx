@@ -123,11 +123,7 @@ export default function CalendarView({
   const grid = useCalendarGrid(settings);
   const nav = useCalendarNavigation();
 
-  // T012: Team members and multi-user worklogs
-  const team = useTeamMembers();
-  const multiUserMode = team.selectedAccountIds.size > 1;
-
-  // Auto-fetch current user so worklogs always load even without project selection
+  // Auto-fetch current user — needed before useTeamMembers so it can be passed as fallback
   const { data: currentUser } = useQuery({
     queryKey: ['myself'],
     queryFn: async () => {
@@ -137,6 +133,11 @@ export default function CalendarView({
     },
     staleTime: 10 * 60 * 1000, // 10 minutes — current user rarely changes
   });
+
+  // T012: Team members and multi-user worklogs
+  // Pass currentUser as fallback so the UserSelector is never empty when no project is selected
+  const team = useTeamMembers(currentUser ?? null);
+  const multiUserMode = team.selectedAccountIds.size > 1;
 
   // Auto-select current user when data arrives
   useEffect(() => {

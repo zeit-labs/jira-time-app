@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { JiraUser } from '@/src/types/jira';
 import { getUserColor } from '@/lib/calendar-constants';
@@ -38,7 +38,7 @@ async function fetchTeamMembersApi(projectKey: string): Promise<TeamMember[]> {
   }));
 }
 
-export function useTeamMembers(): UseTeamMembersReturn {
+export function useTeamMembers(fallbackUser?: JiraUser | null): UseTeamMembersReturn {
   const [projectKey, setProjectKey] = useState<string | null>(null);
   const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
@@ -52,12 +52,22 @@ export function useTeamMembers(): UseTeamMembersReturn {
     return new Set();
   });
 
-  const { data: teamMembers = [], isLoading, error } = useQuery({
+  const { data: fetchedMembers = [], isLoading, error } = useQuery({
     queryKey: ['team-members', projectKey],
     queryFn: () => fetchTeamMembersApi(projectKey!),
     enabled: !!projectKey,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // When no project is selected, fall back to showing just the current user
+  // so the UserSelector is never empty and worklogs still load.
+  const teamMembers: TeamMember[] = useMemo(() => {
+    if (fetchedMembers.length > 0) return fetchedMembers;
+    if (!projectKey && fallbackUser) {
+      return [{ ...fallbackUser, color: getUserColor(fallbackUser.accountId) }];
+    }
+    return [];
+  }, [fetchedMembers, projectKey, fallbackUser]);
 
   // Persist selected account IDs to localStorage
   useEffect(() => {
