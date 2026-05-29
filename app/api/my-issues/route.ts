@@ -15,14 +15,16 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Scope to worklogs in date range if provided, otherwise fall back to recent
+    // Always include issues assigned to the current user (regardless of date / status)
+    // so that Done or recently-resolved tickets are still available for time logging.
+    // When a date range is given, also pull in issues where work was logged in that range.
     let jql: string;
     if (startDate && endDate) {
-      jql = `(assignee = currentUser() OR worklogAuthor = currentUser()) AND worklogDate >= "${startDate}" AND worklogDate <= "${endDate}" ORDER BY updated DESC`;
+      jql = `(assignee = currentUser() OR (worklogAuthor = currentUser() AND worklogDate >= "${startDate}" AND worklogDate <= "${endDate}")) ORDER BY updated DESC`;
     } else {
       jql = '(assignee = currentUser() OR worklogAuthor = currentUser()) ORDER BY updated DESC';
     }
-    const result = await client.searchIssues(jql, { maxResults: 50 });
+    const result = await client.searchAllIssues(jql, 100);
 
     return NextResponse.json({
       issues: result.issues,
