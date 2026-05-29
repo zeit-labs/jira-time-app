@@ -63,7 +63,7 @@ export function useTeamMembers(fallbackUser?: JiraUser | null): UseTeamMembersRe
   // so the UserSelector is never empty and worklogs still load.
   const teamMembers: TeamMember[] = useMemo(() => {
     if (fetchedMembers.length > 0) return fetchedMembers;
-    if (!projectKey && fallbackUser) {
+    if (!projectKey && fallbackUser?.accountId) {
       return [{ ...fallbackUser, color: getUserColor(fallbackUser.accountId) }];
     }
     return [];

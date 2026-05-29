@@ -129,7 +129,8 @@ export default function CalendarView({
     queryFn: async () => {
       const res = await fetch('/api/myself');
       if (!res.ok) return null;
-      return res.json();
+      const data = await res.json();
+      return data.user ?? null; // /api/myself returns { user: {...} }
     },
     staleTime: 10 * 60 * 1000, // 10 minutes — current user rarely changes
   });
