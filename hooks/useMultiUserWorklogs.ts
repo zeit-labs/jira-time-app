@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import type { JiraWorklog } from '@/src/types/jira';
 
 interface UseMultiUserWorklogsProps {
@@ -72,8 +72,9 @@ export function useMultiUserWorklogs({
   const { data: worklogs = [], isLoading, error } = useQuery({
     queryKey: ['worklogs', sortedIssueKeys, startDate, endDate, sortedAccountIds],
     queryFn: ({ signal }) => fetchWorklogs(issueKeys, startDate, endDate, accountIds, signal),
-    enabled: issueKeys.length > 0,
-    staleTime: 30 * 1000, // 30 seconds — worklogs change frequently
+    enabled: issueKeys.length > 0 && startDate !== '' && endDate !== '',
+    staleTime: 30 * 1000,
+    placeholderData: keepPreviousData, // keep previous data while navigating weeks
   });
 
   const refetch = () => {
