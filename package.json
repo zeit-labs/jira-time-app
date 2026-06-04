@@ -4,11 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "build:next": "next build",
+    "build": "next build",
     "dev": "next dev",
-    "start": "node dist/index.js",
-    "start:next": "next start",
+    "start": "next start",
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
