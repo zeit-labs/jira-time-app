@@ -7,6 +7,7 @@ import { textToADF } from '@/lib/adf-helpers';
 import type { GridCell, CellMutationState } from '@/types/timesheet';
 import type { JiraWorklog } from '@/src/types/jira';
 import { formatDateISO } from '@/lib/date-utils';
+import { apiFetch } from '@/lib/api-client';
 
 interface UseWorklogMutationsReturn {
   cellStates: Map<string, CellMutationState>;
@@ -70,7 +71,7 @@ export function useWorklogMutations(): UseWorklogMutationsReturn {
             timeSpentSeconds: newSeconds,
           };
           if (commentBody) body.comment = commentBody;
-          await fetch('/api/worklogs', {
+          await apiFetch('/api/worklogs', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -83,7 +84,7 @@ export function useWorklogMutations(): UseWorklogMutationsReturn {
         } else if (cell.worklogs.length > 0 && newSeconds === 0) {
           // DELETE — user cleared the cell (delete first worklog only for single-worklog cells)
           const wl = cell.worklogs[0];
-          await fetch(`/api/worklogs?issueKey=${encodeURIComponent(cell.issueKey)}&worklogId=${encodeURIComponent(wl.id)}`, {
+          await apiFetch(`/api/worklogs?issueKey=${encodeURIComponent(cell.issueKey)}&worklogId=${encodeURIComponent(wl.id)}`, {
             method: 'DELETE',
           }).then(async (res) => {
             if (!res.ok) {
@@ -100,7 +101,7 @@ export function useWorklogMutations(): UseWorklogMutationsReturn {
             started,
           };
           if (commentBody) body.comment = commentBody;
-          await fetch('/api/worklogs', {
+          await apiFetch('/api/worklogs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
@@ -132,23 +133,23 @@ export function useWorklogMutations(): UseWorklogMutationsReturn {
       try {
         if (newSeconds === 0) {
           // Delete this specific worklog
-          const res = await fetch(
-            `/api/worklogs?issueKey=${encodeURIComponent(cell.issueKey)}&worklogId=${encodeURIComponent(worklog.id)}`,
-            { method: 'DELETE' },
-          );
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            throw new Error(data.error || `Failed (${res.status})`);
-          }
-        } else {
-          const body: Record<string, unknown> = {
-            issueKey: cell.issueKey,
-            worklogId: worklog.id,
-            timeSpentSeconds: newSeconds,
-          };
-          if (comment) body.comment = textToADF(comment);
-          const res = await fetch('/api/worklogs', {
-            method: 'PUT',
+            const res = await apiFetch(
+              `/api/worklogs?issueKey=${encodeURIComponent(cell.issueKey)}&worklogId=${encodeURIComponent(worklog.id)}`,
+              { method: 'DELETE' },
+            );
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error || `Failed (${res.status})`);
+            }
+          } else {
+            const body: Record<string, unknown> = {
+              issueKey: cell.issueKey,
+              worklogId: worklog.id,
+              timeSpentSeconds: newSeconds,
+            };
+            if (comment) body.comment = textToADF(comment);
+            const res = await apiFetch('/api/worklogs', {
+              method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           });
@@ -174,7 +175,7 @@ export function useWorklogMutations(): UseWorklogMutationsReturn {
       setCellStatus(cell.issueKey, dateStr, 'saving');
 
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `/api/worklogs?issueKey=${encodeURIComponent(cell.issueKey)}&worklogId=${encodeURIComponent(worklog.id)}`,
           { method: 'DELETE' },
         );
@@ -200,7 +201,7 @@ export function useWorklogMutations(): UseWorklogMutationsReturn {
 
       try {
         for (const wl of cell.worklogs) {
-          const res = await fetch(
+          const res = await apiFetch(
             `/api/worklogs?issueKey=${encodeURIComponent(cell.issueKey)}&worklogId=${encodeURIComponent(wl.id)}`,
             { method: 'DELETE' },
           );
@@ -233,7 +234,7 @@ export function useWorklogMutations(): UseWorklogMutationsReturn {
 /** Check if a worklog already exists for an issue on a given date */
 export async function checkExistingWorklogs(issueKey: string, date: string): Promise<boolean> {
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/worklogs?issueKeys=${encodeURIComponent(issueKey)}&startDate=${date}&endDate=${date}`,
     );
     if (!res.ok) return false;

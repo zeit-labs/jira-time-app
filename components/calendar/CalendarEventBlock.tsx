@@ -4,6 +4,7 @@ import React from 'react';
 import { token } from '@atlaskit/tokens';
 import { format } from 'date-fns';
 import type { DayEvent } from '@/types/calendar';
+import { adfToText } from '@/lib/adf-helpers';
 
 interface CalendarEventBlockProps {
   dayEvent: DayEvent;
@@ -60,6 +61,9 @@ export default function CalendarEventBlock({
   };
 
   const timeLabel = `${format(calendarEvent.start, 'HH:mm')} – ${format(calendarEvent.end, 'HH:mm')}`;
+  const worklogComment = calendarEvent.worklog?.comment
+    ? adfToText(calendarEvent.worklog.comment)
+    : '';
 
   return (
     <div
@@ -124,6 +128,14 @@ export default function CalendarEventBlock({
             <div className="opacity-80 truncate text-[11px]">{timeLabel}</div>
             {height >= 60 && (
               <div className="opacity-70 truncate mt-0.5 text-[11px]">{calendarEvent.issueSummary}</div>
+            )}
+            {worklogComment && height >= 80 && (
+              <div
+                className="opacity-60 mt-1 text-[11px]"
+                style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal', lineHeight: 1.4 }}
+              >
+                {worklogComment}
+              </div>
             )}
           </>
         )}

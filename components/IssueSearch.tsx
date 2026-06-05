@@ -5,6 +5,7 @@ import Textfield from '@atlaskit/textfield';
 import Spinner from '@atlaskit/spinner';
 import { token } from '@atlaskit/tokens';
 import type { JiraIssue } from '@/src/types/jira';
+import { apiFetch } from '@/lib/api-client';
 
 interface IssueSearchProps {
   onAddIssue: (issue: JiraIssue) => void;
@@ -45,7 +46,7 @@ export default function IssueSearch({ onAddIssue, existingKeys, projectKey }: Is
         ? `${projectFilter}(key = "${searchQuery}" OR summary ~ "${searchQuery}") ORDER BY updated DESC`
         : `${projectFilter}summary ~ "${searchQuery}" ORDER BY updated DESC`;
 
-      const response = await fetch(`/api/issues?jql=${encodeURIComponent(jql)}&maxResults=10`);
+      const response = await apiFetch(`/api/issues?jql=${encodeURIComponent(jql)}&maxResults=10`);
       if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
 

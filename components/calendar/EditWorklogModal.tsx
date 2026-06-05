@@ -9,6 +9,8 @@ import TextArea from '@atlaskit/textarea';
 import Modal, { ModalBody, ModalFooter, ModalHeader, ModalTitle, ModalTransition } from '@atlaskit/modal-dialog';
 import type { CalendarEvent } from '@/types/calendar';
 import { toJiraDatetime } from '@/lib/date-utils';
+import { apiFetch } from '@/lib/api-client';
+import { adfToText } from '@/lib/adf-helpers';
 
 interface EditWorklogModalProps {
   isOpen: boolean;
@@ -32,7 +34,7 @@ export default function EditWorklogModal({ isOpen, calendarEvent, onClose, onSav
       setTime(format(calendarEvent.start, 'HH:mm'));
       const durationHours = (calendarEvent.end.getTime() - calendarEvent.start.getTime()) / (1000 * 60 * 60);
       setHours(String(Math.round(durationHours * 100) / 100));
-      setComment('');
+      setComment(adfToText(calendarEvent.worklog?.comment));
       setError(null);
     }
   }, [calendarEvent]);
@@ -63,7 +65,7 @@ export default function EditWorklogModal({ isOpen, calendarEvent, onClose, onSav
         body.comment = comment.trim();
       }
 
-      const res = await fetch('/api/worklogs', {
+      const res = await apiFetch('/api/worklogs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

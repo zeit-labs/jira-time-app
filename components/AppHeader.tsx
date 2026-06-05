@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { token } from '@atlaskit/tokens';
-import { useQuery } from '@tanstack/react-query';
 import CalendarIcon from '@atlaskit/icon/core/calendar';
 import GridIcon from '@atlaskit/icon/core/grid';
 import ChartBarIcon from '@atlaskit/icon/core/chart-bar';
@@ -10,6 +9,7 @@ import PeopleGroupIcon from '@atlaskit/icon/core/people-group';
 import PersonAvatarIcon from '@atlaskit/icon/core/person-avatar';
 import type { JiraProject } from '@/src/types/jira';
 import ProjectSelector from './ProjectSelector';
+import { useAuth } from '@/hooks/useAuth';
 
 type ViewMode = 'grid' | 'calendar' | 'report' | 'dashboard';
 
@@ -62,6 +62,7 @@ export default function AppHeader({
   showProjectSelector,
 }: AppHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 4);
@@ -69,15 +70,7 @@ export default function AppHeader({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const { data: currentUser } = useQuery({
-    queryKey: ['myself'],
-    queryFn: async () => {
-      const res = await fetch('/api/myself');
-      if (!res.ok) return null;
-      return res.json() as Promise<{ displayName: string; avatarUrls?: Record<string, string> } | null>;
-    },
-    staleTime: 10 * 60 * 1000,
-  });
+  const currentUser = user ? { displayName: user.displayName, avatarUrls: user.avatarUrls } : null;
 
   return (
     <header
@@ -98,7 +91,6 @@ export default function AppHeader({
             className="w-7 h-7 rounded-md flex items-center justify-center"
             style={{ backgroundColor: token('color.background.brand.bold') }}
           >
-            {/* Clock SVG — simple inline so no extra dep */}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <circle cx="8" cy="8" r="6.5" stroke="white" strokeWidth="1.5"/>
               <path d="M8 4.5V8.5L10.5 10" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -128,7 +120,6 @@ export default function AppHeader({
                   backgroundColor: isActive ? token('color.background.selected') : 'transparent',
                   border: 'none',
                   cursor: 'pointer',
-                  // focus ring colour
                   ['--tw-ring-color' as string]: token('color.border.focused'),
                 }}
                 onMouseEnter={(e) => {
@@ -169,12 +160,14 @@ export default function AppHeader({
 
           {/* User avatar */}
           <UserAvatar user={currentUser ?? null} />
+
+          {/* Logout */}
+          <LogoutButton />
         </div>
       </div>
     </header>
   );
 }
-
 /* ── User avatar chip ───────────────────────────────── */
 interface UserAvatarProps {
   user: { displayName: string; avatarUrls?: Record<string, string> } | null;
@@ -236,5 +229,37 @@ function UserAvatar({ user }: UserAvatarProps) {
         {displayName.split(/\s+/)[0] || 'User'}
       </span>
     </div>
+  );
+}
+
+/* ── Logout button ───────────────────────────────── */
+function LogoutButton() {
+  const { logout } = useAuth();
+
+  return (
+    <button
+      onClick={logout}
+      className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors duration-100 outline-none focus-visible:ring-2"
+      style={{
+        color: token('color.text.subtle'),
+        backgroundColor: 'transparent',
+        border: `1px solid ${token('color.border')}`,
+        cursor: 'pointer',
+        ['--tw-ring-color' as string]: token('color.border.focused'),
+      }}
+      title="Log out"
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = token('color.background.danger');
+        (e.currentTarget as HTMLButtonElement).style.color = token('color.text.danger');
+        (e.currentTarget as HTMLButtonElement).style.borderColor = token('color.border.danger');
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';
+        (e.currentTarget as HTMLButtonElement).style.color = token('color.text.subtle');
+        (e.currentTarget as HTMLButtonElement).style.borderColor = token('color.border');
+      }}
+    >
+      Log out
+    </button>
   );
 }

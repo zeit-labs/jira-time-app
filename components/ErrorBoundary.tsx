@@ -48,28 +48,14 @@ export default class ErrorBoundary extends React.Component<Props, State> {
               </h2>
               <p style={{ margin: '0 0 16px', fontSize: 14, color: '#5E4B3C' }}>
                 {isAuth
-                  ? 'Could not authenticate with Jira. Check that your credentials in .env.local are correct.'
+                  ? 'Could not authenticate with Jira. Try logging out and signing in again with your Jira credentials.'
                   : msg || 'An unexpected error occurred.'}
               </p>
 
               {isAuth && (
-                <pre
-                  style={{
-                    background: '#fff',
-                    border: '1px solid #FFBDAD',
-                    borderRadius: 4,
-                    padding: '12px 14px',
-                    fontSize: 12,
-                    color: '#172B4D',
-                    overflowX: 'auto',
-                    marginBottom: 16,
-                  }}
-                >
-{`# .env.local
-JIRA_URL=https://your-org.atlassian.net
-JIRA_USER_EMAIL=you@example.com
-JIRA_API_TOKEN=your-api-token-here`}
-                </pre>
+                <p style={{ fontSize: 13, color: '#5E4B3C', marginBottom: 16 }}>
+                  Your stored credentials may have expired or been revoked. Click &quot;Try again&quot; to dismiss this error.
+                </p>
               )}
 
               <button

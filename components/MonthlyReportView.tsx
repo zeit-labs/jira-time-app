@@ -13,6 +13,7 @@ import {
   type MonthlyReport,
 } from '@/types/report';
 import type { JiraIssue, JiraWorklog } from '@/src/types/jira';
+import { apiFetch } from '@/lib/api-client';
 
 // Dynamically import PDF button to avoid SSR issues with @react-pdf/renderer
 const ReportPDFButton = dynamic<{ report: MonthlyReport }>(
@@ -83,7 +84,7 @@ function getYearOptions() {
 async function fetchMonthlyReport(month: number, year: number, accountId?: string): Promise<ReportApiResponse> {
   const params = new URLSearchParams({ month: String(month), year: String(year) });
   if (accountId) params.set('accountId', accountId);
-  const res = await fetch(`/api/report?${params}`);
+  const res = await apiFetch(`/api/report?${params}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error ?? 'Failed to load report');
@@ -92,7 +93,7 @@ async function fetchMonthlyReport(month: number, year: number, accountId?: strin
 }
 
 async function fetchTeamUsers(month: number, year: number): Promise<TeamUser[]> {
-  const res = await fetch(`/api/team-report?month=${month}&year=${year}`);
+  const res = await apiFetch(`/api/team-report?month=${month}&year=${year}`);
   if (!res.ok) return [];
   const data = await res.json();
   return (data.users ?? []) as TeamUser[];
@@ -152,11 +153,13 @@ export default function MonthlyReportView() {
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px',
     borderBottom: active ? `2px solid ${token('color.border.focused')}` : '2px solid transparent',
+    borderLeft: 'none',
+    borderRight: 'none',
+    borderTop: 'none',
     color: active ? token('color.text.selected') : token('color.text.subtle'),
     fontWeight: active ? 600 : 400,
     cursor: 'pointer',
     background: 'none',
-    border: 'none',
     fontSize: 14,
     transition: 'color 0.15s',
   });

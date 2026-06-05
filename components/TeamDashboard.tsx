@@ -14,6 +14,7 @@ import {
 } from '@/types/report';
 import type { JiraWorklog } from '@/src/types/jira';
 import { getDaysInMonth } from 'date-fns';
+import { apiFetch } from '@/lib/api-client';
 
 // ── Progress alert ────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ const ALERT_STYLES: Record<AlertLevel & string, { label: string; bg: string; col
 interface JiraProject { key: string; name: string; }
 
 async function fetchProjects(): Promise<JiraProject[]> {
-  const res = await fetch('/api/projects');
+  const res = await apiFetch('/api/projects');
   if (!res.ok) return [];
   const data = await res.json();
   return data.projects ?? [];
@@ -83,7 +84,7 @@ function getUserColor(index: number) {
 async function fetchTeamReport(month: number, year: number, projectKey?: string): Promise<TeamReportApiResponse> {
   const params = new URLSearchParams({ month: String(month), year: String(year) });
   if (projectKey) params.set('projectKey', projectKey);
-  const res = await fetch(`/api/team-report?${params}`);
+  const res = await apiFetch(`/api/team-report?${params}`);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error ?? 'Failed to load team dashboard');

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { JiraUser } from '@/src/types/jira';
 import { getUserColor } from '@/lib/calendar-constants';
+import { apiFetch } from '@/lib/api-client';
 
 const STORAGE_KEY = 'calendar-selected-users';
 
@@ -24,7 +25,7 @@ interface UseTeamMembersReturn {
 }
 
 async function fetchTeamMembersApi(projectKey: string): Promise<TeamMember[]> {
-  const res = await fetch(
+  const res = await apiFetch(
     `/api/team-members?project=${encodeURIComponent(projectKey)}`,
   );
   if (!res.ok) {
@@ -40,6 +41,7 @@ async function fetchTeamMembersApi(projectKey: string): Promise<TeamMember[]> {
 
 export function useTeamMembers(fallbackUser?: JiraUser | null): UseTeamMembersReturn {
   const [projectKey, setProjectKey] = useState<string | null>(null);
+
   const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -76,23 +78,6 @@ export function useTeamMembers(fallbackUser?: JiraUser | null): UseTeamMembersRe
       JSON.stringify(Array.from(selectedAccountIds)),
     );
   }, [selectedAccountIds]);
-
-  // When team members load, sync selection state
-  useEffect(() => {
-    if (teamMembers.length === 0) return;
-
-    setSelectedAccountIds((prev) => {
-      if (prev.size === 0) {
-        return new Set(teamMembers.map((m) => m.accountId));
-      }
-      // Keep only IDs that are still valid team members
-      const validIds = new Set(teamMembers.map((m) => m.accountId));
-      const filtered = new Set(
-        Array.from(prev).filter((id) => validIds.has(id)),
-      );
-      return filtered.size > 0 ? filtered : new Set(teamMembers.map((m) => m.accountId));
-    });
-  }, [teamMembers]);
 
   // Public method that triggers the query by setting projectKey
   const fetchTeamMembers = useCallback((key: string) => {

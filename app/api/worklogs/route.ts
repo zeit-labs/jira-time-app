@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { JiraClient } from '@/src/api/jira-client';
-import { loadConfig } from '@/src/config/env';
+import { getCredentialsFromRequest } from '@/src/config/env';
 import {
   JiraAuthenticationError,
   JiraForbiddenError,
@@ -9,6 +9,14 @@ import {
 } from '@/src/errors/jira-errors';
 import type { JiraWorklog, WorklogCreatePayload, WorklogUpdatePayload } from '@/src/types/jira';
 import { textToADF } from '@/lib/adf-helpers';
+
+function getClient(request: NextRequest): { client: JiraClient } | { error: NextResponse } {
+  const config = getCredentialsFromRequest(request);
+  if (!config) {
+    return { error: NextResponse.json({ error: 'No Jira credentials provided.' }, { status: 401 }) };
+  }
+  return { client: new JiraClient(config) };
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -39,10 +47,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  try {
-    const config = loadConfig();
-    const client = new JiraClient(config);
+  const clientOrError = getClient(request);
+  if ('error' in clientOrError) return clientOrError.error;
+  const client = clientOrError.client;
 
+  try {
     // Fetch worklogs in batches to avoid Jira rate limiting (429 errors)
     const BATCH_SIZE = 5;
     const results: { key: string; worklogs: JiraWorklog[] }[] = [];
@@ -140,8 +149,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const config = loadConfig();
-    const client = new JiraClient(config);
+    const clientOrError = getClient(request);
+    if ('error' in clientOrError) return clientOrError.error;
+    const client = clientOrError.client;
 
     const payload: WorklogCreatePayload = {
       timeSpentSeconds,
@@ -178,8 +188,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const config = loadConfig();
-    const client = new JiraClient(config);
+    const clientOrError = getClient(request);
+    if ('error' in clientOrError) return clientOrError.error;
+    const client = clientOrError.client;
 
     const updateData: Partial<WorklogUpdatePayload> = {};
     if (timeSpentSeconds !== undefined) updateData.timeSpentSeconds = timeSpentSeconds;
@@ -209,8 +220,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const config = loadConfig();
-    const client = new JiraClient(config);
+    const clientOrError = getClient(request);
+    if ('error' in clientOrError) return clientOrError.error;
+    const client = clientOrError.client;
     await client.deleteWorklog(issueKey, worklogId);
 
     return NextResponse.json({ success: true }, { status: 200 });

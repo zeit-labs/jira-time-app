@@ -18,6 +18,7 @@ import { loadSavedIssues, addSavedIssue, removeSavedIssue } from '@/lib/issue-st
 import { useWorklogMutations } from '@/hooks/useWorklogMutations';
 import type { WeekRange, IssueSelection } from '@/types/timesheet';
 import type { JiraIssue, JiraWorklog } from '@/src/types/jira';
+import { apiFetch } from '@/lib/api-client';
 
 interface WeeklyGridProps {
   projectKey?: string;
@@ -53,9 +54,9 @@ export default function WeeklyGrid({ projectKey }: WeeklyGridProps) {
         let res: Response;
         if (projectKey) {
           const jql = `project = "${projectKey}" AND (worklogDate >= "${startDate}" AND worklogDate <= "${endDate}" OR assignee = currentUser()) ORDER BY updated DESC`;
-          res = await fetch(`/api/issues?jql=${encodeURIComponent(jql)}&maxResults=50`);
+          res = await apiFetch(`/api/issues?jql=${encodeURIComponent(jql)}&maxResults=50`);
         } else {
-          res = await fetch(`/api/my-issues?startDate=${startDate}&endDate=${endDate}`);
+          res = await apiFetch(`/api/my-issues?startDate=${startDate}&endDate=${endDate}`);
         }
         if (!res.ok) return;
         const data = await res.json();
@@ -91,7 +92,7 @@ export default function WeeklyGrid({ projectKey }: WeeklyGridProps) {
     queryFn: async () => {
       if (issueKeys.length === 0) return [];
       const jql = `key in (${issueKeys.join(',')}) ORDER BY key ASC`;
-      const res = await fetch(`/api/issues?jql=${encodeURIComponent(jql)}&maxResults=${issueKeys.length}`);
+      const res = await apiFetch(`/api/issues?jql=${encodeURIComponent(jql)}&maxResults=${issueKeys.length}`);
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || `Failed to fetch issues (${res.status})`);
@@ -107,7 +108,7 @@ export default function WeeklyGrid({ projectKey }: WeeklyGridProps) {
   const { data: worklogsData, isLoading: isLoadingWorklogs, error: worklogsError } = useQuery({
     queryKey: ['worklogs', 'weekly', sortedIssueKeys, startDate, endDate],
     queryFn: async () => {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/worklogs?issueKeys=${issueKeys.join(',')}&startDate=${startDate}&endDate=${endDate}`
       );
       if (!res.ok) {
