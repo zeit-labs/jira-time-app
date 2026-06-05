@@ -10,6 +10,7 @@ import Modal, { ModalBody, ModalHeader, ModalTitle, ModalTransition } from '@atl
 import { formatDateISO } from '@/lib/date-utils';
 import { formatHours } from '@/lib/worklog-aggregator';
 import { adfToText } from '@/lib/adf-helpers';
+import { apiFetch } from '@/lib/api-client';
 import type { JiraWorklog, JiraIssue } from '@/src/types/jira';
 
 interface HistoricalLogViewerProps {
@@ -44,7 +45,7 @@ export default function HistoricalLogViewer({ isOpen, onClose, savedIssueKeys }:
       let issueKeys = keysToUse.length > 0 ? keysToUse : [];
 
       if (issueKeys.length === 0) {
-        const issuesRes = await fetch('/api/my-issues');
+        const issuesRes = await apiFetch('/api/my-issues');
         if (issuesRes.ok) {
           const data = await issuesRes.json();
           issueKeys = (data.issues || []).map((i: JiraIssue) => i.key);
@@ -57,7 +58,7 @@ export default function HistoricalLogViewer({ isOpen, onClose, savedIssueKeys }:
         return;
       }
 
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/worklogs?issueKeys=${issueKeys.join(',')}&startDate=${startDate}&endDate=${endDate}`,
       );
       if (!res.ok) {

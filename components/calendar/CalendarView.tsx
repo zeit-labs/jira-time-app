@@ -28,6 +28,7 @@ import EditWorklogModal from './EditWorklogModal';
 import DropZoneOverlay from './DropZoneOverlay';
 import { useIssueDragDrop } from '@/hooks/useIssueDragDrop';
 import { toJiraDatetime } from '@/lib/date-utils';
+import { apiFetch } from '@/lib/api-client';
 import Button from '@atlaskit/button/new';
 import type { WorklogTemplate } from '@/types/template';
 
@@ -127,7 +128,7 @@ export default function CalendarView({
   const { data: currentUser } = useQuery({
     queryKey: ['myself'],
     queryFn: async () => {
-      const res = await fetch('/api/myself');
+      const res = await apiFetch('/api/myself');
       if (!res.ok) return null;
       const data = await res.json();
       return data.user ?? null; // /api/myself returns { user: {...} }
@@ -168,16 +169,16 @@ export default function CalendarView({
   }, [nav.visibleDays]);
 
   // Fetch issues scoped to visible date range
-  const { data: ownIssues } = useQuery({
+  const { data: ownIssues, isLoading: isLoadingIssues } = useQuery({
     queryKey: ['calendar-issues-scoped', projectKey, dateRange.startDate, dateRange.endDate],
     queryFn: async () => {
       if (!dateRange.startDate || !dateRange.endDate) return [];
       let res: Response;
       if (projectKey) {
         const jql = `project = "${projectKey}" AND (worklogDate >= "${dateRange.startDate}" AND worklogDate <= "${dateRange.endDate}" OR assignee = currentUser()) ORDER BY updated DESC`;
-        res = await fetch(`/api/issues?jql=${encodeURIComponent(jql)}&maxResults=50`);
+        res = await apiFetch(`/api/issues?jql=${encodeURIComponent(jql)}&maxResults=50`);
       } else {
-        res = await fetch(`/api/my-issues?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+        res = await apiFetch(`/api/my-issues?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
       }
       if (!res.ok) return issues; // fall back to parent-provided issues
       const data = await res.json();
@@ -236,7 +237,7 @@ export default function CalendarView({
     const timeSpentSeconds = Math.round((newEnd.getTime() - newStart.getTime()) / 1000);
 
     try {
-      const res = await fetch('/api/worklogs', {
+      const res = await apiFetch('/api/worklogs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -265,7 +266,7 @@ export default function CalendarView({
     const timeSpentSeconds = Math.round((newEnd.getTime() - newStart.getTime()) / 1000);
 
     try {
-      const res = await fetch('/api/worklogs', {
+      const res = await apiFetch('/api/worklogs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -311,7 +312,7 @@ export default function CalendarView({
     setIssuePickerState({ isOpen: false, startDate: null, timeSpentSeconds: 0 });
 
     try {
-      const res = await fetch('/api/worklogs', {
+      const res = await apiFetch('/api/worklogs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -437,7 +438,7 @@ export default function CalendarView({
       const timeSpentSeconds = durationMinutes * 60;
 
       try {
-        const res = await fetch('/api/worklogs', {
+        const res = await apiFetch('/api/worklogs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -539,9 +540,16 @@ export default function CalendarView({
       )}
 
       {/* Loading indicator for worklog fetching */}
-      {multiUserWorklogs.isLoading && (
+      {(multiUserWorklogs.isFetching || isLoadingIssues) && (
         <div className="h-0.5 overflow-hidden" style={{ backgroundColor: token('color.background.neutral') }}>
-          <div className="h-full animate-pulse" style={{ width: '100%', backgroundColor: token('color.background.brand.bold') }} />
+          <div
+            className="h-full animate-pulse"
+            style={{
+              width: multiUserWorklogs.isFetching && !isLoadingIssues ? '100%' : '60%',
+              backgroundColor: token('color.background.brand.bold'),
+              transition: 'width 0.5s ease',
+            }}
+          />
         </div>
       )}
 
@@ -654,7 +662,21 @@ export default function CalendarView({
           onDragLeave={issueDragDrop.handleDragLeave}
           onDrop={issueDragDrop.handleDrop}
         >
-          <div className="flex" style={{ minHeight: grid.totalHeight + 60 }}>
+          <div className="flex relative" style={{ minHeight: grid.totalHeight + 60 }}>
+            {/* Loading overlay while worklogs are being fetched */}
+            {(multiUserWorklogs.isLoading && multiUserWorklogs.worklogs.length === 0) && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
+                style={{ backgroundColor: 'rgba(255,255,255,0.6)' }}>
+                <div className="flex flex-col items-center gap-3 pointer-events-auto">
+                  <svg className="animate-spin h-8 w-8" style={{ color: token('color.background.brand.bold') }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  <span className="text-sm font-medium" style={{ color: token('color.text.subtle') }}>Loading worklogs...</span>
+                </div>
+              </div>
+            )}
+
             {/* Time axis (left column) */}
             <div
               className="sticky left-0 z-10 flex-shrink-0"
@@ -765,7 +787,7 @@ export default function CalendarView({
             today.setHours(9, 0, 0, 0);
             const timeSpentSeconds = Math.round(template.defaultHours * 3600);
             try {
-              const res = await fetch('/api/worklogs', {
+              const res = await apiFetch('/api/worklogs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -805,7 +827,7 @@ export default function CalendarView({
             // Create duplicate at the next slot after the original
             const newStart = new Date(calEvent.end);
             try {
-              const res = await fetch('/api/worklogs', {
+              const res = await apiFetch('/api/worklogs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -824,24 +846,24 @@ export default function CalendarView({
             }
           });
         }}
-        onDelete={async () => {
-          const dayEvent = contextMenu.menuState.targetEvent;
-          if (!dayEvent) return;
-          const calEvent = dayEvent.calendarEvent;
-          try {
-            const res = await fetch(
-              `/api/worklogs?issueKey=${encodeURIComponent(calEvent.issueKey)}&worklogId=${encodeURIComponent(calEvent.id)}`,
-              { method: 'DELETE' }
-            );
-            if (!res.ok) {
-              const data = await res.json().catch(() => ({}));
-              throw new Error(data.error || `Failed (${res.status})`);
+        onDelete={() => {
+          contextMenu.handleDelete(async (dayEvent) => {
+            contextMenu.closeMenu();
+            const calEvent = dayEvent.calendarEvent;
+            try {
+              const res = await apiFetch(
+                `/api/worklogs?issueKey=${encodeURIComponent(calEvent.issueKey)}&worklogId=${encodeURIComponent(calEvent.id)}`,
+                { method: 'DELETE' }
+              );
+              if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || `Failed (${res.status})`);
+              }
+              multiUserWorklogs.refetch();
+            } catch (err) {
+              showError(`Failed to delete worklog: ${(err as Error).message}`);
             }
-            multiUserWorklogs.refetch();
-          } catch (err) {
-            showError(`Failed to delete worklog: ${(err as Error).message}`);
-          }
-          contextMenu.closeMenu();
+          });
         }}
         onClose={contextMenu.closeMenu}
       />

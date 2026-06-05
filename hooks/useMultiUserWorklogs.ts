@@ -2,6 +2,7 @@
 
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import type { JiraWorklog } from '@/src/types/jira';
+import { apiFetch } from '@/lib/api-client';
 
 interface UseMultiUserWorklogsProps {
   issueKeys: string[];
@@ -13,6 +14,7 @@ interface UseMultiUserWorklogsProps {
 interface UseMultiUserWorklogsReturn {
   worklogs: JiraWorklog[];
   isLoading: boolean;
+  isFetching: boolean;
   error: string | null;
   refetch: () => void;
 }
@@ -33,7 +35,7 @@ async function fetchWorklogs(
     params.set('accountIds', accountIds.join(','));
   }
 
-  const res = await fetch(`/api/worklogs?${params.toString()}`, { signal });
+  const res = await apiFetch(`/api/worklogs?${params.toString()}`, { signal });
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -69,7 +71,7 @@ export function useMultiUserWorklogs({
   const sortedIssueKeys = [...issueKeys].sort();
   const sortedAccountIds = [...accountIds].sort();
 
-  const { data: worklogs = [], isLoading, error } = useQuery({
+  const { data: worklogs = [], isLoading, isFetching, error } = useQuery({
     queryKey: ['worklogs', sortedIssueKeys, startDate, endDate, sortedAccountIds],
     queryFn: ({ signal }) => fetchWorklogs(issueKeys, startDate, endDate, accountIds, signal),
     enabled: issueKeys.length > 0 && startDate !== '' && endDate !== '',
@@ -84,6 +86,7 @@ export function useMultiUserWorklogs({
   return {
     worklogs,
     isLoading,
+    isFetching,
     error: error ? (error as Error).message : null,
     refetch,
   };

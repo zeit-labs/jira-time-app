@@ -42,27 +42,36 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     if (persistedRef.current) return;
     persistedRef.current = true;
 
-    // Set up localStorage persistence — only runs on client
-    const persister = createSyncStoragePersister({
-      storage: window.localStorage,
-      key: 'JIRA_QUERY_CACHE',
-      serialize: JSON.stringify,
-      deserialize: JSON.parse,
-    });
+    try {
+      const persister = createSyncStoragePersister({
+        storage: window.localStorage,
+        key: 'JIRA_QUERY_CACHE',
+        serialize: JSON.stringify,
+        deserialize: JSON.parse,
+      });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    persistQueryClient({
-      queryClient: queryClient as any,
-      persister,
-      maxAge: 30 * 60 * 1000, // 30 minutes
-      dehydrateOptions: {
-        shouldDehydrateQuery: (query) => {
-          const key = (query.queryKey as unknown[])[0];
-          // Only persist report/dashboard queries across refreshes
-          return key === 'monthly-report' || key === 'team-dashboard';
+      const [unsubscribe, promise] = persistQueryClient({
+        queryClient: queryClient as any,
+        persister,
+        maxAge: 30 * 60 * 1000,
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) => {
+            const key = (query.queryKey as unknown[])[0];
+            return key === 'monthly-report' || key === 'team-dashboard';
+          },
         },
-      },
-    });
+      });
+
+      promise.catch((err: unknown) => {
+        console.warn('Failed to restore persisted query cache:', err);
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    } catch (err) {
+      console.warn('Failed to set up query cache persistence:', err);
+    }
   }, []);
 
   return (

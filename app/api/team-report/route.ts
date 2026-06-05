@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { JiraClient } from '@/src/api/jira-client';
-import { loadConfig } from '@/src/config/env';
+import { getCredentialsFromRequest } from '@/src/config/env';
 import { JiraAuthenticationError, JiraRateLimitError } from '@/src/errors/jira-errors';
 import type { JiraWorklog } from '@/src/types/jira';
 
@@ -23,8 +23,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Valid month (1-12) and year are required.' }, { status: 400 });
   }
 
+  const config = getCredentialsFromRequest(request);
+  if (!config) {
+    return NextResponse.json({ error: 'No Jira credentials provided.' }, { status: 401 });
+  }
+
   try {
-    const config = loadConfig();
     const client = new JiraClient(config);
 
     // Date range

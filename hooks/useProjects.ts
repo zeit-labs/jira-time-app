@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { JiraProject } from '@/src/types/jira';
+import { apiFetch } from '@/lib/api-client';
 
 async function fetchProjects(): Promise<JiraProject[]> {
-  const res = await fetch('/api/projects');
+  const res = await apiFetch('/api/projects');
   if (!res.ok) throw new Error('Failed to fetch projects');
   const data = await res.json();
   return data.projects || [];

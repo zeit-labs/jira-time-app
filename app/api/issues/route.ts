@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { JiraClient } from '@/src/api/jira-client';
-import { loadConfig } from '@/src/config/env';
+import { getCredentialsFromRequest } from '@/src/config/env';
 import {
   JiraAuthenticationError,
   JiraRateLimitError,
@@ -18,8 +18,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const config = getCredentialsFromRequest(request);
+  if (!config) {
+    return NextResponse.json({ error: 'No Jira credentials provided.' }, { status: 401 });
+  }
+
   try {
-    const config = loadConfig();
     const client = new JiraClient(config);
     const result = await client.searchIssues(jql, {
       maxResults: maxResults ? parseInt(maxResults, 10) : 50,

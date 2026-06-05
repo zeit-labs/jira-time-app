@@ -66,12 +66,11 @@ export function useContextMenu(): UseContextMenuReturn {
   const handleDelete = useCallback(
     (callback: (event: DayEvent) => void) => {
       if (menuState.targetEvent) {
+        closeMenu();
         callback(menuState.targetEvent);
-        // Don't closeMenu here — let the context menu component handle close
-        // after delete confirmation is shown and acted upon
       }
     },
-    [menuState.targetEvent],
+    [menuState.targetEvent, closeMenu],
   );
 
   // Close on document click or Escape key
